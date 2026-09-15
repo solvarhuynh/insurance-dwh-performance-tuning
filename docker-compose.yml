@@ -1,0 +1,67 @@
+# Docker Compose configuration for Insurance DWH & Performance Tuning
+# Architecture: Microsoft SQL Server 2022 + Apache Airflow (Webserver & Scheduler)
+#
+# Hardware Recommendation:
+# - Minimum RAM: >= 6GB total allocated to Docker/WSL2 for running both SQL Server and Airflow smoothly
+# - Recommended: 8GB+ RAM for handling high volume data processing and CDC workloads
+
+services:
+  # ---------------------------------------------------------------------------
+  # Microsoft SQL Server 2022 Service
+  # ---------------------------------------------------------------------------
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: insurance_sqlserver
+    restart: always
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=YourStrong!Passw0rd_Placeholder
+      - MSSQL_PID=Developer
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+      - ./data/raw:/var/opt/mssql/raw_data:ro
+    # Resource reservation/limits recommendation (>= 2GB for SQL Server)
+    deploy:
+      resources:
+        limits:
+          memory: 4096M
+        reservations:
+          memory: 2048M
+
+  # ---------------------------------------------------------------------------
+  # Apache Airflow Service (Webserver & Scheduler)
+  # ---------------------------------------------------------------------------
+  airflow:
+    image: apache/airflow:2.8.1-python3.10
+    container_name: insurance_airflow
+    restart: always
+    depends_on:
+      - sqlserver
+    environment:
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - AIRFLOW__CORE__EXECUTOR=SequentialExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=sqlite:////opt/airflow/airflow.db
+      - AIRFLOW__WEBSERVER__SECRET_KEY=temporary_secret_key_placeholder
+      # TODO: Configure production connection string to SQL Server or dedicated Postgres metadata DB in future phases
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./sql:/opt/airflow/sql
+      - ./log:/opt/airflow/logs
+      - ./data/raw:/opt/airflow/raw_data:ro
+    # `standalone` khoi tao metadata database va chay ca webserver lẫn scheduler
+    # trong mot service Airflow, dung voi thiet ke hai service tong the.
+    command: standalone
+    deploy:
+      resources:
+        limits:
+          memory: 2048M
+        reservations:
+          memory: 1024M
+
+volumes:
+  sqlserver_data:
+    driver: local
