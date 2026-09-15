@@ -1,0 +1,3 @@
+# Keep data/raw directory structure in git
+# Raw data files are ignored by .gitignore
+
