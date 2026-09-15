@@ -15,9 +15,9 @@ Các bước dưới đây là trình tự tái lập đúng thiết kế. Nhữ
 
 ## 2. Chuẩn bị dữ liệu thô
 
-1. Tải Brazilian Insurance Market Data (SUSEP) và Prudential Life Insurance Assessment từ các nguồn được nêu trong `implementation-guide.md`.
+1. Tải Brazilian Insurance Market Data (SUSEP) và Prudential Life Insurance Assessment từ các nguồn được nêu trong `docs/specs/implementation-guide.md`.
 2. Đặt các file CSV vào `data/raw/`. Thư mục này không được commit dữ liệu lớn theo `.gitignore`.
-3. Mở và chạy `notebooks/01-eda.ipynb`; điền kết quả cột, kiểu dữ liệu và vấn đề chất lượng vào `docs/data-dictionary.md`.
+3. Mở và chạy `notebooks/01-eda.ipynb`; điền kết quả cột, kiểu dữ liệu và vấn đề chất lượng vào `docs/architecture/data-dictionary.md`.
 4. Cập nhật tên file CSV trong `sql/01_load_staging.sql` để khớp file đã tải.
 
 Trạng thái: đây là Giai đoạn 1, chưa hoàn thành.
