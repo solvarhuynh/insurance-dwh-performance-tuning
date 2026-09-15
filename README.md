@@ -59,7 +59,6 @@ insurance-dwh-project/
 ├── data/raw/
 │   └── .gitkeep
 ├── docs/
-│   ├── README.md
 │   ├── architecture/
 │   │   ├── architecture-explained.md
 │   │   ├── data-dictionary.md
