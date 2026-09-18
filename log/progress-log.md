@@ -7,7 +7,21 @@ Muc dich: ghi lai toan bo tien do du an theo thoi gian thuc, de bat ky AI hoac n
 - Khong xoa dong cu. Neu mot viec bi lam lai, ghi dong moi voi trang thai "Redo" va ly do.
 - Truoc khi bat dau phien lam viec moi, doc toan bo bang nay truoc, uu tien doc tu duoi len de biet trang thai moi nhat.
 
+## Quy uoc trang thai
+- SCAFFOLD: Moi tao khung, stub, template, commented-out, chua co logic thuc thi hoan chinh hoac chua chay.
+- STATIC_PASS: Da vuot qua kiem tra tinh (linter, syntax check, compile check, static import check, parse YAML/JSON).
+- RUNTIME_PASS: Da chay thuc te thanh cong trong moi truong runtime that (Docker/SQL Server/Airflow/Python) voi input va output that.
+- BLOCKED: Dang bi nghen do thieu dependency, thieu du lieu dau vao, hoac thieu ha tang.
+- DONE: Chi dung khi mot milestone / task workflow hoan tat tron ven theo dung Definition of Done cua task do.
+- FAILED: Chay runtime hoac validation bi loi, can sua chua.
+
+QUY TAC BAT BUOC:
+- Khong dung DONE de thay the cho SCAFFOLD.
+- Trang thai DONE chi ap dung cho cac task workflow/quan tri hoac cac milestone ky thuat da dat toan bo tieu chi Definition of Done (bao gom validation tuong ung).
+
 ## Bang tien do
+
+> Chu thich kiem toan (Audit Note / Semantics Note): Toan bo cac dong log lich su ben duoi co trang thai "Done" (tu 2026-09-15 den 2026-09-18) duoc giu nguyen ven de bao toan du lieu lich su. Cac dong nay phan anh viec hoan thanh tao khung cau truc (scaffold), script khoi tao hoac tai lieu dac ta, va PHAI duoc doc kem cot "Ghi chu" de hieu dung ngu canh. Cac dong nay KHONG dong nghia voi viec toan bo tinh nang hay pipeline da dat RUNTIME_PASS.
 
 | Thoi gian | Giai doan | Viec da lam | File da tao/sua | Duong dan | Trang thai | Ghi chu |
 |---|---|---|---|---|---|---|
@@ -36,11 +50,34 @@ Muc dich: ghi lai toan bo tien do du an theo thoi gian thuc, de bat ky AI hoac n
 | 2026-09-15 13:29 | Tai lieu | Tao tai lieu giai thich cau truc thu muc hien tai va chuc nang tung khu vuc/file | repository-structure.md; README.md | docs/repository-structure.md; README.md | Done | Ghi ro vai tro va trang thai cua tung thu muc/file; phan con la khung duoc danh dau |
 | 2026-09-15 15:08 | Tai lieu | Tai cau truc thu muc docs thanh 4 nhom chuyen biet va cap nhat README.md tieng Viet co dau | README.md; docs/README.md; docs/architecture/*; docs/guides/*; docs/reports/*; docs/specs/* | docs/ | Done | Phan chia docs/ thanh architecture, guides, reports, specs kem README.md dieu huong; README.md chuan tieng Viet co dau |
 | 2026-09-18 19:30 | Kien truc & ML | Nang cap quy mo du lieu len ~2.5GB (Porto Seguro 1.5M rows) va tich hop Machine Learning Batch Prediction vao DWH & Airflow | ml/*; sql/08_sp_load_risk_predictions.sql; dags/insurance_dwh_pipeline.py; migrations/V1__create_dwh_schema.sql; docs/*; README.md | / | Done | Thay Prudential bang Porto Seguro Safe Driver (~1.5M rows); tao ml/train_risk_model.py, ml/predict_risk_batch.py, sql/08_..., cap nhat DAG va DWH schema |
+| 2026-09-18 20:05 | Governance | Task P1-WF-01: Chuan hoa Cursor workflow rules cho personal DWH project | .cursor/rules/*.mdc, .gitignore | .cursor/rules/, .gitignore, log/progress-log.md | Done | Loai bo multi-member template (TV1/2/3, branch tv1/2/3, docs/logs, docs/setup); chot single-project subsystem, canonical log/progress-log.md, canonical docs/guides/how-to-run.md, Git workflow ca nhan, cho phep version-control .cursor/rules/; validation grep sach va git diff --check pass |
+| 2026-09-18 20:15 | Governance | Task P1-WF-02: Chuan hoa ngu nghia trang thai tien do va dong bo tai lieu | log/progress-log.md, README.md, docs/specs/implementation-guide.md, docs/architecture/repository-structure.md, docs/guides/how-to-run.md | log/progress-log.md, README.md, docs/ | Done | Dinh nghia bo tu vung trang thai (SCAFFOLD, STATIC_PASS, RUNTIME_PASS, BLOCKED, DONE, FAILED); them Audit Note cho lich su cu; lap bang snapshot 13 subsystems; phan dinh kien truc muc tieu vs hien trang trong README va docs; khong sua code |
+| 2026-09-18 20:25 | Governance | Task P1-WF-03: Thiet lap repository validation layer | scripts/validate_repo.py; docs/guides/how-to-run.md; .cursor/rules/03-kiem-tra-git-va-review.mdc; README.md; docs/architecture/repository-structure.md | scripts/; docs/; .cursor/rules/; log/progress-log.md; README.md | Done | Tao scripts/validate_repo.py su dung stdlib + PyYAML kiem tra 44 tieu chi tinh (canonical files, compose, Python AST, notebook JSON, SQL block comment); them Runtime Validation Checklist 11 subsystems vao docs/guides/how-to-run.md; cap nhat quality gate rule; xac nhan khong co runtime claim gia |
+
+## Current Implementation State (Snapshot 2026-09-18)
+
+| STT | Subsystem | Trang thai hien tai | Bang chung thuc te | Dieu kien chuyen trang thai tiep theo |
+|---|---|---|---|---|
+| 1 | Data/raw (SUSEP, Porto Seguro) | SCAFFOLD | Chi co data/raw/.gitkeep; chua co file CSV tho nao duoc tai ve | Tai file CSV SUSEP (~8.3M rows) va Porto Seguro (~1.5M rows) vao data/raw/ |
+| 2 | Docker compose | STATIC_PASS | docker-compose.yml da kiem tra parse tinh cu phap hop le; chua khoi chay container | Chay docker-compose up -d tren Docker/WSL2 va xac nhan container sqlserver, airflow healthy |
+| 3 | Migrations (DDL V1) | SCAFFOLD | migrations/V1__create_dwh_schema.sql chua DDL stub dang block comment; chua apply qua migration tool | Bo comment DDL, cau hinh cong cu migration (Flyway/DbUp) va thuc thi thanh cong vao SQL Server |
+| 4 | Staging load | SCAFFOLD | sql/01_load_staging.sql chua DDL staging va lenh BULK INSERT stub dang block comment | Dinh nghia dung schema cot theo CSV that va chay BULK INSERT thanh cong vao Staging_InsuranceRaw |
+| 5 | CDC | SCAFFOLD | sql/02_enable_cdc.sql chua lenh bat sys.sp_cdc_enable_db va bang watermark stub | Chay script tren SQL Server co SQL Server Agent hoat dong; xac nhan CDC capture jobs va bang watermark hoat dong |
+| 6 | SCD2 (Customer) | SCAFFOLD | sql/03_sp_dim_customer_scd2.sql chua khung sp_Load_DimCustomer voi MERGE stub dang comment | Hoan thien logic MERGE insert new / expire old va kiem tra tinh dung dan qua du lieu test/that |
+| 7 | Fact load (Premium, Claims) | SCAFFOLD | sql/05_sp_fact_premium.sql va sql/06_sp_fact_claims.sql chua khung sp_Load_Fact* voi MERGE stub | Cai dat lookup surrogate key, MERGE UPSERT, kiem tra audit log va tinh idempotent |
+| 8 | Data Quality check | SCAFFOLD | sql/07_data_quality_checks.sql chua khung procedure sp_Run_DataQualityChecks voi cac rule stub | Hoan thien cac rule kiem tra (not null, unique, FK integrity), ghi log vao DQ_Check_Log va tra status loi dung |
+| 9 | Airflow DAG | STATIC_PASS | dags/insurance_dwh_pipeline.py pass py_compile; task chi la stub EmptyOperator/PythonOperator in log | Ket noi DAG voi SQL Server qua provider/hook va chay thanh cong tren Airflow scheduler/webserver |
+| 10 | ML model training | STATIC_PASS | ml/train_risk_model.py pass py_compile; ham trich xuat dac trung va huan luyen dang tra ve stub | Ket noi du lieu that tu Porto Seguro/DWH, huan luyen model that va sinh file artifact ml/risk_model.pkl |
+| 11 | ML batch scoring | STATIC_PASS / SCAFFOLD | ml/predict_risk_batch.py pass py_compile; sql/08_sp_load_risk_predictions.sql chua MERGE stub | Chay batch scoring voi du lieu that va nap ket qua vao Fact_Customer_Risk_Prediction qua sp_Load_CustomerRiskPredictions |
+| 12 | Performance tuning | SCAFFOLD | docs/reports/performance-tuning-summary.md dang la template ke hoach cho Giai doan 7; chua co script index/partitioning | Tao baseline query, do STATISTICS IO/TIME, tao index/partitioning va do lai ket qua so sanh before/after |
+| 13 | Power BI dashboard | SCAFFOLD | Chi co powerbi/.gitkeep; chua co file .pbix | Xay dung model, visual bao cao va luu file powerbi/insurance-dashboard.pbix o Giai doan 8 |
 
 ## Giai doan hien tai
+Giai doan 1 — Khao sat & chuan bi du lieu that (Governance & Validation Layer)
 Giai doan 1 — Khao sat & chuan bi du lieu that
 
 ## Viec tiep theo can lam
+P1-WF-03 — Add repository validation layer.
 1. Hoan thanh Giai doan 1 trong docs/specs/implementation-guide.md: tai 2 bo du lieu SUSEP (~8.3M dong) va Porto Seguro (~1.5M dong) ve data/raw/.
-2. Chay khao sat EDA trong notebooks/01-eda.ipynb: kiem tra shape, dtypes, null check, duplicate check.
-3. Dien du lieu that vao docs/architecture/data-dictionary.md va tong hop danh sach van de chat luong du lieu can xu ly.
+2. Chay khao sat EDA trong notebooks/01-eda.ipynb: kiem tra shape, dtypes, null check, duplicate check tren du lieu that.
+3. Dien thong tin du lieu that vao docs/architecture/data-dictionary.md va tong hop danh sach van de chat luong du lieu can xu ly.

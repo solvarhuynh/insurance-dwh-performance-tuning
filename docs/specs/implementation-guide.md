@@ -17,6 +17,26 @@ Xây một Data Warehouse ngành bảo hiểm dùng **dữ liệu thật quy mô
 
 ---
 
+## Quy ước trạng thái & Nguyên tắc Definition of Done
+
+Mỗi giai đoạn trong tài liệu này có một danh sách **Definition of Done (DoD)**. Để đảm bảo tính trung thực kỹ thuật và phản ánh chính xác tiến độ, dự án áp dụng nghiêm ngặt các quy ước trạng thái sau:
+
+### Bộ từ vựng trạng thái chuẩn:
+- `SCAFFOLD`: Mới tạo khung file, thư mục, stub code, block comment hoặc template; chưa được cấu hình hay thực thi. Việc tạo một file stub **KHÔNG** đủ điều kiện để tích hoàn thành các mục đòi hỏi vận hành.
+- `STATIC_PASS`: Mã nguồn hoặc tài liệu đã vượt qua các bước kiểm tra tĩnh (linter, syntax check bằng `py_compile`, parse YAML/JSON/Compose, đối chiếu schema/DDL cân bằng comment, không có cú pháp lỗi).
+- `RUNTIME_PASS`: Mã nguồn, truy vấn SQL, container hoặc pipeline đã thực sự chạy thành công trong môi trường thực thi (Docker, SQL Server, Airflow, Python) với dữ liệu đầu vào và kết quả đầu ra thực tế được kiểm chứng.
+- `BLOCKED`: Công việc tạm thời không thể tiếp tục do thiếu điều kiện tiên quyết (ví dụ: chưa tải dữ liệu thô, chưa khởi động container hạ tầng, thiếu thư viện).
+- `DONE`: Chỉ đánh dấu khi toàn bộ các tiêu chí nghiệm thu của một task workflow hoặc một giai đoạn đã hoàn tất trọn vẹn theo đúng Definition of Done.
+- `FAILED`: Quá trình kiểm tra tĩnh hoặc chạy runtime phát sinh lỗi, cần khắc phục.
+
+### Nguyên tắc xác thực:
+1. **Phân biệt rạch ròi giữa tạo file và xác thực vận hành**:
+   - Một file script SQL hoặc DAG Python mới ở dạng template/stub chỉ được ghi nhận là `SCAFFOLD` (hoặc `STATIC_PASS` nếu đã kiểm tra cú pháp).
+   - Mục DoD nào yêu cầu "chạy thành công", "nạp dữ liệu", "đối chiếu row count", "kết nối được" BẮT BUỘC phải đạt `RUNTIME_PASS` trên môi trường thật mới được đánh dấu tick `[x]`.
+2. **Không đánh dấu hoàn thành sớm**: Tuyệt đối không tích chọn các mục Definition of Done khi mới chỉ tạo khung file mà chưa thực thi xác minh thực tế.
+
+---
+
 ## Giai đoạn 1 — Khảo sát & chuẩn bị dữ liệu thật
 
 **Việc cần làm:**

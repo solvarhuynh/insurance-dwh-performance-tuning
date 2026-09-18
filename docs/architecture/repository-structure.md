@@ -26,6 +26,8 @@ insurance-dwh-project/
 ├── notebooks/                  # Notebook khảo sát dữ liệu (EDA)
 │   └── 01-eda.ipynb
 ├── powerbi/                    # File dashboard Power BI; hiện chỉ có .gitkeep
+├── scripts/                    # Kịch bản kiểm tra tự động và vận hành
+│   └── validate_repo.py        # Static baseline validation cho toàn bộ repository
 ├── sql/                        # Script staging, CDC, ETL, data quality và ML load
 │   ├── 01_load_staging.sql
 │   ├── 02_enable_cdc.sql
@@ -44,19 +46,20 @@ insurance-dwh-project/
 
 | Đường dẫn | Chức năng | Trạng thái hiện tại |
 |---|---|---|
-| `.cursor/rules/` | Chứa quy tắc hỗ trợ quy trình làm việc, quản lý file/log, review Git, Python và bàn giao. | Đang có sẵn trong môi trường phát triển. |
-| `data/raw/` | Nơi đặt các CSV nguyên bản tải từ SUSEP (~8.3M dòng) và Porto Seguro (~1.5M dòng). Dữ liệu ở đây được giữ nguyên để đối chiếu. | Chưa có CSV; có `.gitkeep` để giữ thư mục trong Git. |
-| `docs/` | Nơi chứa tài liệu kiến trúc, thuật ngữ, data dictionary, cách chạy, insight, tuning và đặc tả nguồn. | Đã cấu trúc thành 4 nhóm (`architecture/`, `guides/`, `reports/`, `specs/`). |
-| `ml/` | Chứa mã huấn luyện mô hình dự đoán rủi ro và mã batch scoring phục vụ pipeline tự động. | Đã có `train_risk_model.py` và `predict_risk_batch.py`. |
-| `dags/` | Chứa mã DAG Airflow điều phối toàn bộ luồng ETL, DQ check và ML scoring. | `insurance_dwh_pipeline.py` đã có đầy đủ task và dependency. |
-| `log/` | Lưu lịch sử công việc, trạng thái giai đoạn và các báo cáo kiểm tra. | Có `progress-log.md` và `review-report-2026-09-15.md`. |
-| `migrations/` | Lưu các thay đổi cấu trúc Data Warehouse theo version (Flyway/DbUp). | Có `V1__create_dwh_schema.sql` (gồm 8 bảng Fact/Dim). |
-| `notebooks/` | Dùng cho phân tích khám phá dữ liệu (EDA): xem shape, kiểu dữ liệu, null, duplicate. | Có `01-eda.ipynb` với 5 section chuẩn. |
-| `powerbi/` | Nơi lưu dashboard Power BI kết nối đến `DWH_Insurance`. | Có `.gitkeep`, sẵn sàng cho file `.pbix`. |
-| `sql/` | Chứa SQL theo thứ tự pipeline: nạp staging, bật CDC, nạp Dim/Fact, DQ checks và nạp kết quả ML. | Đủ 8 file theo thiết kế chuẩn. |
-| `.gitignore` | Ngăn dữ liệu thô lớn, secret, cache Python và file tạm bị đưa vào Git. | Đã có. |
-| `docker-compose.yml` | Mô tả môi trường chạy cục bộ gồm SQL Server và Airflow. | Đã có cấu hình chuẩn. |
-| `README.md` | Điểm bắt đầu cho người mới: mục tiêu, dữ liệu, kiến trúc, công nghệ, cây repo, cách chạy và trạng thái. | Đã chuẩn hoá tiếng Việt có dấu đầy đủ. |
+| `.cursor/rules/` | Chứa quy tắc hỗ trợ quy trình làm việc, quản lý file/log, review Git, Python và bàn giao. | STATIC_PASS: Bộ quy tắc quản trị chuẩn hoá cho dự án cá nhân, đã kiểm tra regex/link sạch. |
+| `data/raw/` | Nơi đặt các CSV nguyên bản tải từ SUSEP (~8.3M dòng) và Porto Seguro (~1.5M dòng). Dữ liệu ở đây được giữ nguyên để đối chiếu. | SCAFFOLD: Hiện chỉ có `.gitkeep`, chưa tải CSV thô (chờ Giai đoạn 1). |
+| `docs/` | Nơi chứa tài liệu kiến trúc, thuật ngữ, data dictionary, cách chạy, insight, tuning và đặc tả nguồn. | STATIC_PASS: Đã cấu trúc thành 4 nhóm (`architecture/`, `guides/`, `reports/`, `specs/`), đã đối chiếu nội dung. |
+| `ml/` | Chứa mã huấn luyện mô hình dự đoán rủi ro và mã batch scoring phục vụ pipeline tự động. | STATIC_PASS: `train_risk_model.py` và `predict_risk_batch.py` pass `py_compile`; hàm trích xuất/huấn luyện là stub chờ data. |
+| `dags/` | Chứa mã DAG Airflow điều phối toàn bộ luồng ETL, DQ check và ML scoring. | STATIC_PASS: `insurance_dwh_pipeline.py` pass `py_compile`; các task hiện dùng operator stub, chưa chạy runtime. |
+| `log/` | Lưu lịch sử công việc, trạng thái giai đoạn và các báo cáo kiểm tra. | STATIC_PASS: Có `progress-log.md` kèm snapshot 13 phân hệ và `review-report-2026-09-15.md`. |
+| `migrations/` | Lưu các thay đổi cấu trúc Data Warehouse theo version (Flyway/DbUp). | SCAFFOLD: `V1__create_dwh_schema.sql` chứa DDL 8 bảng ở dạng block comment stub, chưa apply vào database. |
+| `notebooks/` | Dùng cho phân tích khám phá dữ liệu (EDA): xem shape, kiểu dữ liệu, null, duplicate. | SCAFFOLD: `01-eda.ipynb` có cấu trúc JSON hợp lệ; chưa chạy với dữ liệu thật. |
+| `powerbi/` | Nơi lưu dashboard Power BI kết nối đến `DWH_Insurance`. | SCAFFOLD: Hiện chỉ có `.gitkeep`, chờ triển khai ở Giai đoạn 8. |
+| `scripts/` | Chứa script vận hành và static baseline validator cho repo. | STATIC_PASS: `validate_repo.py` dùng stdlib + PyYAML kiểm tra toàn bộ static quality gates. |
+| `sql/` | Chứa SQL theo thứ tự pipeline: nạp staging, bật CDC, nạp Dim/Fact, DQ checks và nạp kết quả ML. | SCAFFOLD: 8 file T-SQL ở dạng khung mẫu/stub với MERGE và block comment, chưa thực thi trên SQL Server. |
+| `.gitignore` | Ngăn dữ liệu thô lớn, secret, cache Python và file tạm bị đưa vào Git. | STATIC_PASS: Đã cấu hình và kiểm tra loại trừ phù hợp. |
+| `docker-compose.yml` | Mô tả môi trường chạy cục bộ gồm SQL Server và Airflow. | STATIC_PASS: Đã kiểm tra parse tĩnh YAML/compose; chưa khởi chạy container runtime. |
+| `README.md` | Điểm bắt đầu cho người mới: mục tiêu, dữ liệu, kiến trúc, công nghệ, cây repo, cách chạy và trạng thái. | STATIC_PASS: Đã phân định rõ kiến trúc mục tiêu và bảng snapshot hiện trạng thực tế. |
 
 ## Quan hệ giữa các khu vực
 

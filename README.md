@@ -23,9 +23,9 @@ Dự án cá nhân — Data Engineering & Machine Learning trên nền tảng Mi
 
 Hai bộ dữ liệu cùng bắt nguồn từ thị trường bảo hiểm Brazil, mang lại sự đồng nhất cao về bối cảnh địa lý và kinh tế. Tổng quy mô thô đạt **~2.0 — 2.5 GB CSV** (~10 triệu dòng), khi nạp vào SQL Server kèm Staging, CDC và Indexing sẽ đạt **~5 — 6 GB database**.
 
-## Kiến trúc tổng quan
+## Kiến trúc tổng quan (Kiến trúc mục tiêu)
 
-Luồng dữ liệu tổng thể chạy qua các tầng kiến trúc:
+Mô hình mục tiêu mô tả luồng dữ liệu End-to-End dự kiến khi hoàn thành toàn bộ 8 giai đoạn:
 Staging -> DWH Star Schema -> Incremental Load/CDC -> Data Quality -> Machine Learning Batch Scoring -> Orchestration Airflow -> Performance Tuning -> Power BI.
 
 1. Staging: Nạp file CSV thô vào database Staging_InsuranceRaw bằng lệnh BULK INSERT, giữ nguyên cấu trúc ban đầu để đối chiếu toàn vẹn.
@@ -89,6 +89,8 @@ insurance-dwh-project/
 │   └── 01-eda.ipynb
 ├── powerbi/
 │   └── .gitkeep
+├── scripts/
+│   └── validate_repo.py
 ├── sql/
 │   ├── 01_load_staging.sql
 │   ├── 02_enable_cdc.sql
@@ -104,37 +106,72 @@ insurance-dwh-project/
 
 ## Cách chạy dự án
 
+Lưu ý: Dự án hiện đang ở Giai đoạn 1. Các bước dưới đây mô tả trình tự thực thi theo thiết kế mục tiêu, kèm trạng thái kiểm tra thực tế hiện tại của từng bước:
+
 ### Bước 1: Thiết lập hạ tầng Docker
+- Trạng thái: STATIC_PASS (tệp `docker-compose.yml` đã được kiểm tra cú pháp hợp lệ; chưa chạy container runtime).
 - Khởi chạy container SQL Server và Airflow:
   ```bash
   docker-compose up -d
   ```
 
 ### Bước 2: Chạy Schema Migrations
+- Trạng thái: SCAFFOLD (`migrations/V1__create_dwh_schema.sql` chứa DDL mẫu đang để dạng block comment, chưa áp dụng vào database qua Flyway/DbUp).
 - Khởi tạo DWH schema (bao gồm 8 bảng Fact/Dim và bảng dự đoán ML) qua Flyway hoặc DbUp:
   ```bash
   # TODO: Chạy migration V1__create_dwh_schema.sql
   ```
 
 ### Bước 3: Nạp dữ liệu và Kích hoạt CDC
+- Trạng thái: SCAFFOLD (chưa tải file CSV thô vào `data/raw/`; `sql/01_load_staging.sql` và `sql/02_enable_cdc.sql` đang là script khung).
 - Chạy script nạp staging và bật CDC:
   ```bash
   # TODO: Chạy sql/01_load_staging.sql và sql/02_enable_cdc.sql
   ```
 
 ### Bước 4: Huấn luyện mô hình Machine Learning
+- Trạng thái: STATIC_PASS (`ml/train_risk_model.py` vượt qua kiểm tra cú pháp `py_compile`; hàm trích xuất dữ liệu đang là stub chờ dữ liệu).
 - Huấn luyện mô hình baseline tính điểm rủi ro:
   ```bash
   python ml/train_risk_model.py
   ```
 
 ### Bước 5: Chạy pipeline trên Airflow
+- Trạng thái: STATIC_PASS (`dags/insurance_dwh_pipeline.py` vượt qua kiểm tra cú pháp `py_compile`; các task hiện dùng operator stub, chưa chạy trên cụm Airflow thật).
 - Kích hoạt DAG `insurance_dwh_pipeline` trên Airflow Webserver (`http://localhost:8080`).
 - Pipeline sẽ tự động thực thi: Staging -> Dimensions -> Facts -> DQ Checks -> ML Batch Scoring -> Load Predictions -> Notify.
 
-## Trạng thái hiện tại của dự án
+## Trạng thái triển khai hiện tại (Current Implementation Status)
 
-Xem chi tiết tiến độ thực hiện, danh sách việc đã làm và kế hoạch tiếp theo tại [log/progress-log.md](log/progress-log.md).
+Dự án hiện đang ở **Giai đoạn 1 — Khảo sát & chuẩn bị dữ liệu thật** (kết hợp hoàn thiện Governance và Validation Layer). Toàn bộ mã nguồn và kịch bản trong kho lưu trữ hiện ở mức **SCAFFOLD** hoặc **STATIC_PASS**, chưa có subsystem nào đạt **RUNTIME_PASS**.
+
+### Quy ước trạng thái chuẩn
+- `SCAFFOLD`: Mới tạo khung, template, stub, commented-out; chưa chạy.
+- `STATIC_PASS`: Đã vượt qua kiểm tra cú pháp, compile, linter, parse tĩnh.
+- `RUNTIME_PASS`: Đã thực thi thành công trong môi trường runtime thật với dữ liệu thật.
+- `BLOCKED`: Đang bị nghẽn do thiếu dependency, dữ liệu hoặc hạ tầng.
+- `DONE`: Milestone / task workflow hoàn tất trọn vẹn theo Definition of Done.
+- `FAILED`: Chạy runtime hoặc validation bị lỗi.
+
+### Bảng tổng hợp hiện trạng các phân hệ
+
+| Phân hệ | Trạng thái hiện tại | Bằng chứng thực tế |
+|---|---|---|
+| Data/raw (SUSEP, Porto Seguro) | SCAFFOLD | Chỉ có `data/raw/.gitkeep`, chưa có file CSV thô |
+| Docker compose | STATIC_PASS | `docker-compose.yml` pass parse tĩnh; chưa khởi chạy container |
+| Migrations (DDL V1) | SCAFFOLD | `migrations/V1__create_dwh_schema.sql` chứa DDL mẫu dạng block comment |
+| Staging load | SCAFFOLD | `sql/01_load_staging.sql` chứa DDL và BULK INSERT stub dạng block comment |
+| CDC | SCAFFOLD | `sql/02_enable_cdc.sql` chứa script bật CDC và bảng watermark stub |
+| SCD2 (Customer) | SCAFFOLD | `sql/03_sp_dim_customer_scd2.sql` chứa procedure MERGE stub |
+| Fact load (Premium, Claims) | SCAFFOLD | `sql/05_...` và `sql/06_...` chứa procedure MERGE stub |
+| Data Quality check | SCAFFOLD | `sql/07_data_quality_checks.sql` chứa procedure kiểm tra stub |
+| Airflow DAG | STATIC_PASS | `dags/insurance_dwh_pipeline.py` pass `py_compile`; task dùng stub operator |
+| ML model training | STATIC_PASS | `ml/train_risk_model.py` pass `py_compile`; logic trích xuất dạng stub |
+| ML batch scoring | STATIC_PASS / SCAFFOLD | `ml/predict_risk_batch.py` pass `py_compile`; `sql/08_...` chứa MERGE stub |
+| Performance tuning | SCAFFOLD | Báo cáo `docs/reports/` là template cho Giai đoạn 7; chưa có script index/partition |
+| Power BI dashboard | SCAFFOLD | Chỉ có `powerbi/.gitkeep`, chưa có file `.pbix` |
+
+Chi tiết nhật ký công việc và kế hoạch từng bước được cập nhật liên tục tại [log/progress-log.md](log/progress-log.md).
 
 ## Ghi chú về Performance Tuning
 

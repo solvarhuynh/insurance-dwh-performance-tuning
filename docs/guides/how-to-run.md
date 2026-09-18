@@ -2,9 +2,31 @@
 
 ## Trạng thái cần biết trước
 
-Tại thời điểm viết tài liệu này, dự án đang ở Giai đoạn 1. Repository có Docker Compose, script SQL, migration, module ML và DAG dưới dạng khung chuẩn bị đón dữ liệu thật.
+Tại thời điểm viết tài liệu này, dự án đang ở **Giai đoạn 1 — Khảo sát & chuẩn bị dữ liệu thật** (kết hợp hoàn thiện Governance và Validation Layer). Mã nguồn hiện tại trong repository ở mức **SCAFFOLD** hoặc **STATIC_PASS**, chưa có bước nào đạt **RUNTIME_PASS**.
 
-Các bước dưới đây là trình tự tái lập toàn bộ pipeline theo đúng thiết kế End-to-End.
+Tài liệu này phân biệt rạch ròi 2 nhóm thao tác:
+1. **Kiểm tra tĩnh (Static Check)**: Các lệnh khả dụng ngay trong môi trường phát triển hiện tại, không yêu cầu dữ liệu lớn hay container đang chạy.
+2. **Quy trình vận hành thực tế (Runtime Execution)**: Trình tự End-to-End theo kiến trúc mục tiêu, đòi hỏi hạ tầng Docker, SQL Server hoạt động và tập dữ liệu thô đã tải về.
+
+---
+
+## 0. Các lệnh kiểm tra tĩnh (Khả dụng ngay)
+
+Các lệnh sau dùng để xác thực cú pháp và tính toàn vẹn cấu hình mà không cần khởi động hạ tầng:
+
+1. Kiểm tra cú pháp Python (DAG Airflow và module ML):
+   ```powershell
+   python -m py_compile dags/insurance_dwh_pipeline.py ml/train_risk_model.py ml/predict_risk_batch.py
+   ```
+   *Trạng thái*: `STATIC_PASS` — các tệp mã nguồn tuân thủ đúng cú pháp Python AST.
+
+2. Kiểm tra tính hợp lệ của tệp Docker Compose:
+   ```powershell
+   docker compose config
+   ```
+   *Trạng thái*: `STATIC_PASS` — cấu trúc dịch vụ `sqlserver` và `airflow` được parse thành công.
+
+---
 
 ## 1. Cài các công cụ cần thiết
 
@@ -14,6 +36,7 @@ Các bước dưới đây là trình tự tái lập toàn bộ pipeline theo �
 4. Cài Power BI Desktop để mở dashboard khi Giai đoạn 8 hoàn tất.
 
 ## 2. Chuẩn bị dữ liệu thô
+*Trạng thái hiện tại*: `SCAFFOLD` / `BLOCKED` (chờ tải dữ liệu thực tế vào `data/raw/`)
 
 1. Tải 2 bộ dữ liệu:
    - Brazilian Insurance Market Data (SUSEP, ~8.3M dòng).
@@ -23,6 +46,7 @@ Các bước dưới đây là trình tự tái lập toàn bộ pipeline theo �
 4. Cập nhật tên file CSV trong `sql/01_load_staging.sql` để khớp file đã tải.
 
 ## 3. Khởi động SQL Server và Airflow
+*Trạng thái hiện tại*: `STATIC_PASS` (cấu hình YAML sẵn sàng; cần môi trường Docker runtime để chạy)
 
 Từ thư mục gốc repository, chạy:
 
@@ -37,18 +61,21 @@ Cấu hình nằm tại `docker-compose.yml`:
 - Dữ liệu thô được mount từ `data/raw/` vào container SQL Server.
 
 ## 4. Tạo staging và nạp CSV
+*Trạng thái hiện tại*: `SCAFFOLD` (kịch bản DDL và BULK INSERT ở dạng stub comment; đòi hỏi runtime SQL Server và dữ liệu CSV thật)
 
 1. Kết nối SQL Server bằng Azure Data Studio/SSMS đến `localhost,1433` với tài khoản `sa`.
 2. Mở và chạy `sql/01_load_staging.sql`.
 3. Đối chiếu số dòng staging với số dòng từng CSV gốc.
 
 ## 5. Chạy schema migration
+*Trạng thái hiện tại*: `SCAFFOLD` (`migrations/V1__create_dwh_schema.sql` ở dạng stub comment; đòi hỏi cấu hình Flyway/DbUp và runtime SQL Server)
 
 1. Áp dụng migration tại `migrations/V1__create_dwh_schema.sql` (bằng Flyway hoặc DbUp) để tạo database `DWH_Insurance` cùng 8 bảng Fact/Dim:
    - `Dim_Date`, `Dim_Region`, `Dim_Policy`, `Dim_Customer` (SCD2).
    - `Fact_Premium`, `Fact_Claims`, `Fact_Customer_Risk_Prediction`.
 
 ## 6. Bật CDC và chạy ETL
+*Trạng thái hiện tại*: `SCAFFOLD` (toàn bộ stored procedure ở dạng khung stub với MERGE comment; đòi hỏi runtime SQL Server)
 
 Theo thứ tự, chạy các file sau trên SQL Server:
 1. `sql/02_enable_cdc.sql` để bật CDC và tạo `ETL_Watermark`.
@@ -59,6 +86,7 @@ Theo thứ tự, chạy các file sau trên SQL Server:
 6. `sql/08_sp_load_risk_predictions.sql` để tạo thủ tục nạp điểm rủi ro ML.
 
 ## 7. Huấn luyện mô hình Machine Learning
+*Trạng thái hiện tại*: `STATIC_PASS` / Chờ runtime (mã nguồn hợp lệ; hàm trích xuất là stub chờ kết nối dữ liệu thật)
 
 1. Chạy script huấn luyện baseline model:
    ```powershell
@@ -67,13 +95,35 @@ Theo thứ tự, chạy các file sau trên SQL Server:
 2. Model artifact sẽ được lưu tại `ml/risk_model.pkl`.
 
 ## 8. Chạy DAG Airflow
+*Trạng thái hiện tại*: `STATIC_PASS` / Chờ runtime (DAG pass cú pháp; các task dùng operator stub, chờ kết nối hạ tầng thật)
 
 1. Mở Airflow Webserver tại `http://localhost:8080`.
 2. Bật DAG `insurance_dwh_pipeline` và kích hoạt chạy thủ công.
 3. Xác nhận chuỗi task thực thi:
-   `load_staging` → các Dimension (song song) → các Fact → `run_data_quality_checks` → `predict_customer_risk` → `load_risk_predictions` → `notify`.
+   `load_staging` -> các Dimension (song song) -> các Fact -> `run_data_quality_checks` -> `predict_customer_risk` -> `load_risk_predictions` -> `notify`.
 
 ## 9. Mở Power BI
+*Trạng thái hiện tại*: `SCAFFOLD` (chưa có tệp `.pbix`; sẽ triển khai ở Giai đoạn 8)
 
 1. Mở `powerbi/insurance-dashboard.pbix` bằng Power BI Desktop.
 2. Kết nối tới `DWH_Insurance`, làm mới dữ liệu và kiểm tra các báo cáo Loss Ratio, xu hướng phí và rủi ro dự đoán.
+
+---
+
+## 10. Runtime validation checklist
+
+Danh mục này quy định toàn bộ tiêu chí nghiệm thu vận hành thật (Runtime Validation). Mỗi bước chỉ được đánh dấu hoàn thành khi có bằng chứng thực tế từ môi trường đang chạy.
+
+| STT | Phân hệ | Lệnh / Quy trình thực thi | Bằng chứng nghiệm thu mong đợi (Expected Evidence) | Trạng thái hiện tại |
+|---|---|---|---|---|
+| 1 | Infrastructure | `docker compose up -d` && `docker compose ps` | Container `insurance_sqlserver` và `insurance_airflow` ở trạng thái `running / healthy`; các cổng 1433 và 8080 phản hồi kết nối. | PENDING_RUNTIME |
+| 2 | Migration | Chạy migration qua Flyway/DbUp (hoặc `sqlcmd -i migrations/V1__create_dwh_schema.sql`) | Database `DWH_Insurance` được tạo; 8 bảng Fact/Dim tồn tại trong `sys.tables` với cấu trúc khóa chính, surrogate key và data type chuẩn. | PENDING_RUNTIME |
+| 3 | Staging | `sqlcmd -i sql/01_load_staging.sql` | `Staging_InsuranceRaw` có các bảng staging; số dòng nạp qua `BULK INSERT` đối chiếu khớp 100% với file CSV gốc (~8.3M dòng SUSEP, ~1.5M dòng Porto Seguro). | PENDING_RUNTIME |
+| 4 | CDC | `sqlcmd -i sql/02_enable_cdc.sql` | `sys.sp_cdc_enable_db` và `sys.sp_cdc_enable_table` bật thành công; capture jobs hoạt động; `ETL_Watermark` ghi nhận LSN; rerun không reload toàn bộ mà chỉ xử lý net changes; watermark LSN tăng dần. | PENDING_RUNTIME |
+| 5 | Dimension | `EXEC dbo.sp_Load_DimCustomer;` && `EXEC dbo.sp_Load_DimOthers;` | SCD2: Duy nhất 1 dòng `Is_Current = 1` cho mỗi `CustomerId`; các dải `Start_Date`/`End_Date` lịch sử không chồng lấn; Idempotency: chạy lại cùng batch liên tiếp không làm tăng row count Dim; `ETL_Audit_Log` ghi status `'SUCCESS'`. | PENDING_RUNTIME |
+| 6 | Fact | `EXEC dbo.sp_Load_FactPremium;` && `EXEC dbo.sp_Load_FactClaims;` | Referential Integrity: Mọi Foreign Key (`CustomerKey`, `DateKey`, `PolicyKey`, `RegionKey`) map chuẩn vào Dim, không có orphan record (-1); đúng độ hạt nghiệp vụ; chạy lại cùng batch bảo toàn số liệu. | PENDING_RUNTIME |
+| 7 | DQ | `EXEC dbo.sp_Run_DataQualityChecks;` | `DQ_Check_Log` ghi kết quả kiểm định cho từng rule (not null, unique, FK, range check); khi cố ý đưa bản ghi lỗi, procedure trả về status thất bại (`@Status = 'FAILED'`) và ngắt pipeline. | PENDING_RUNTIME |
+| 8 | Airflow | `docker compose exec airflow airflow dags trigger insurance_dwh_pipeline` | Toàn bộ DAG kết thúc với trạng thái `success` trên Web UI `localhost:8080`; đúng thứ tự phụ thuộc (Staging -> Dim song song -> Fact -> DQ -> ML -> Load Predictions -> Notify). | PENDING_RUNTIME |
+| 9 | ML | `python ml/train_risk_model.py` && `python ml/predict_risk_batch.py` | Sinh artifact `ml/risk_model.pkl` với ROC-AUC > 0.60; batch scoring sinh điểm rủi ro cho khách hàng mới; `sp_Load_CustomerRiskPredictions` nạp thành công vào `Fact_Customer_Risk_Prediction`. | PENDING_RUNTIME |
+| 10 | Tuning | Query benchmark với `SET STATISTICS IO, TIME ON;` trước/sau index | Bảng đo lường ghi nhận Logical Reads và CPU/Elapsed Time giảm rõ rệt; ảnh chụp Execution Plan chuyển từ Clustered Index Scan sang Index Seek + Key Lookup. | PENDING_RUNTIME |
+| 11 | Power BI | Mở `insurance-dashboard.pbix` và refresh data | Báo cáo hiển thị các visual: Loss Ratio theo bang, xu hướng phí theo quý, đối chiếu rủi ro dự đoán của mô hình với tổn thất thực tế khớp 100% dữ liệu DWH. | PENDING_RUNTIME |
