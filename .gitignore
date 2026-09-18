@@ -35,7 +35,9 @@ wheels/
 .installed.cfg
 *.egg
 
-.cursor/
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**
 
 # Jupyter Notebooks
 .ipynb_checkpoints
