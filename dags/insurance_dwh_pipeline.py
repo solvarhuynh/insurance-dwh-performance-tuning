@@ -1,14 +1,15 @@
 """
 insurance_dwh_pipeline.py
 Giai doan: Giai doan 6 — Orchestration voi Airflow
-Muc dich: Dieu phoi toan bo pipeline Data Warehouse:
-          Load Staging -> Load Dim (song song) -> Load Fact -> Data Quality Check -> Notify
-Tham chieu: implementation-guide.md (Giai doan 6, Muc 1, 2, 3, 4)
+Muc dich: Dieu phoi toan bo pipeline Data Warehouse & Machine Learning:
+          Load Staging -> Load Dim (song song) -> Load Fact -> Data Quality Check
+          -> Batch Risk Prediction (ML) -> Load Risk Predictions -> Notify
+Tham chieu: docs/specs/implementation-guide.md
 
 Thu tu phu thuoc (Dependency):
   load_staging >> [load_dim_customer, load_dim_policy, load_dim_date, load_dim_region]
   [load_dim_customer, load_dim_policy, load_dim_date, load_dim_region] >> [load_fact_premium, load_fact_claims]
-  [load_fact_premium, load_fact_claims] >> run_data_quality_checks >> notify
+  [load_fact_premium, load_fact_claims] >> run_data_quality_checks >> predict_customer_risk >> load_risk_predictions >> notify
 """
 
 from datetime import datetime, timedelta
@@ -43,6 +44,15 @@ def run_stored_procedure_stub(procedure_name: str, **kwargs):
     print(f"Run ID: {kwargs.get('run_id')}")
 
 
+def run_ml_batch_prediction_stub(**kwargs):
+    """
+    TODO: Thuc thi script ML batch scoring (ml/predict_risk_batch.py).
+    Doc cac record khach hang moi, tinh toan PredictedClaimProbability va RiskCategory.
+    """
+    print("Executing ML Batch Risk Scoring job...")
+    print(f"Batch Run ID: {kwargs.get('run_id')}")
+
+
 default_args = {
     'owner': 'data_engineering_team',
     'depends_on_past': False,
@@ -55,10 +65,10 @@ default_args = {
 with DAG(
     dag_id='insurance_dwh_pipeline',
     default_args=default_args,
-    description='Pipeline ETL va kiem dinh chat luong DWH Bao hiem (SQL Server + CDC)',
+    description='Pipeline ETL, Data Quality va Batch ML Scoring DWH Bao hiem (SQL Server + CDC + LightGBM)',
     schedule_interval='@daily',
     catchup=False,
-    tags=['insurance', 'dwh', 'cdc', 'sqlserver'],
+    tags=['insurance', 'dwh', 'cdc', 'sqlserver', 'machine-learning'],
 ) as dag:
 
     # -------------------------------------------------------------------------
@@ -74,7 +84,7 @@ with DAG(
     # -------------------------------------------------------------------------
     # Dimension Tasks (Chay song song sau load_staging)
     # -------------------------------------------------------------------------
-    # TODO: Goi Stored Procedure sp_Load_DimCustomer (SCD Type 2)
+    # TODO: Goi Stored Procedure sp_Load_DimCustomer (SCD Type 2 tu Porto Seguro)
     load_dim_customer = PythonOperator(
         task_id='load_dim_customer',
         python_callable=run_stored_procedure_stub,
@@ -130,6 +140,22 @@ with DAG(
     )
 
     # -------------------------------------------------------------------------
+    # Machine Learning Batch Prediction Tasks
+    # -------------------------------------------------------------------------
+    # Task 1: Chay batch scoring bang Python ML Model
+    predict_customer_risk = PythonOperator(
+        task_id='predict_customer_risk',
+        python_callable=run_ml_batch_prediction_stub,
+    )
+
+    # Task 2: Nap ket qua du doan ML vao Fact_Customer_Risk_Prediction trong DWH
+    load_risk_predictions = PythonOperator(
+        task_id='load_risk_predictions',
+        python_callable=run_stored_procedure_stub,
+        op_kwargs={'procedure_name': 'dbo.sp_Load_CustomerRiskPredictions'},
+    )
+
+    # -------------------------------------------------------------------------
     # Task: notify (Gui thong bao sau khi pipeline hoan thanh thanh cong)
     # -------------------------------------------------------------------------
     # TODO: Thong bao hoan thanh pipeline qua webhook hoac log
@@ -145,5 +171,4 @@ with DAG(
 
     load_staging >> dim_tasks
     dim_tasks >> fact_tasks
-    fact_tasks >> run_data_quality_checks >> notify
-
+    fact_tasks >> run_data_quality_checks >> predict_customer_risk >> load_risk_predictions >> notify

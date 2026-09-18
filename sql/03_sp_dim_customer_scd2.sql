@@ -5,10 +5,10 @@
 -- Muc dich: Tao bang ETL_Audit_Log va Stored Procedure sp_Load_DimCustomer
 --           thuc hien incremental load theo SCD Type 2 (Start_Date, End_Date,
 --           Is_Current) tu CDC net changes, ghi audit log, dam bao tinh idempotent.
--- Tham chieu: implementation-guide.md (Giai doan 4, Muc 4, 5, 6, 7)
+-- Tham chieu: docs/specs/implementation-guide.md (Giai doan 4, Muc 4, 5, 6, 7)
 --
 -- Input mong doi:
---   - CDC net changes tu bang stg_prudential_raw tren Staging_InsuranceRaw
+--   - CDC net changes tu bang stg_portoseguro_raw tren Staging_InsuranceRaw (~1.5M rows)
 --   - Biet duoc moc LSN tu ETL_Watermark
 --
 -- Output mong doi:

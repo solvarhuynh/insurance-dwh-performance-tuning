@@ -35,11 +35,12 @@ Muc dich: ghi lai toan bo tien do du an theo thoi gian thuc, de bat ky AI hoac n
 | 2026-09-15 13:25 | Review | Dong bo huong dan chay voi service Airflow standalone sau khi chuan hoa Docker Compose | how-to-run.md | docs/how-to-run.md | Done | Ghi ro Airflow khoi tao metadata database/tai khoan khi khoi dong; chua chay xac minh container |
 | 2026-09-15 13:29 | Tai lieu | Tao tai lieu giai thich cau truc thu muc hien tai va chuc nang tung khu vuc/file | repository-structure.md; README.md | docs/repository-structure.md; README.md | Done | Ghi ro vai tro va trang thai cua tung thu muc/file; phan con la khung duoc danh dau |
 | 2026-09-15 15:08 | Tai lieu | Tai cau truc thu muc docs thanh 4 nhom chuyen biet va cap nhat README.md tieng Viet co dau | README.md; docs/README.md; docs/architecture/*; docs/guides/*; docs/reports/*; docs/specs/* | docs/ | Done | Phan chia docs/ thanh architecture, guides, reports, specs kem README.md dieu huong; README.md chuan tieng Viet co dau |
+| 2026-09-18 19:30 | Kien truc & ML | Nang cap quy mo du lieu len ~2.5GB (Porto Seguro 1.5M rows) va tich hop Machine Learning Batch Prediction vao DWH & Airflow | ml/*; sql/08_sp_load_risk_predictions.sql; dags/insurance_dwh_pipeline.py; migrations/V1__create_dwh_schema.sql; docs/*; README.md | / | Done | Thay Prudential bang Porto Seguro Safe Driver (~1.5M rows); tao ml/train_risk_model.py, ml/predict_risk_batch.py, sql/08_..., cap nhat DAG va DWH schema |
 
 ## Giai doan hien tai
 Giai doan 1 — Khao sat & chuan bi du lieu that
 
 ## Viec tiep theo can lam
-1. Hoan thanh Giai doan 1 trong docs/specs/implementation-guide.md: tai 2 bo du lieu SUSEP va Prudential ve data/raw/.
+1. Hoan thanh Giai doan 1 trong docs/specs/implementation-guide.md: tai 2 bo du lieu SUSEP (~8.3M dong) va Porto Seguro (~1.5M dong) ve data/raw/.
 2. Chay khao sat EDA trong notebooks/01-eda.ipynb: kiem tra shape, dtypes, null check, duplicate check.
 3. Dien du lieu that vao docs/architecture/data-dictionary.md va tong hop danh sach van de chat luong du lieu can xu ly.

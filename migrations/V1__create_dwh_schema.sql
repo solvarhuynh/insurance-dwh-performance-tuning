@@ -4,15 +4,16 @@
 -- Cong cu: Flyway / DbUp (version-controlled migration)
 -- Muc dich: Tao database DWH_Insurance va toan bo bang Fact/Dim theo kien truc
 --           Star Schema, bao gom Primary Key, Foreign Key, Business Key va Surrogate Key.
--- Tham chieu: implementation-guide.md (Giai doan 3, Muc 1, 2, 3, 4)
+-- Tham chieu: docs/specs/implementation-guide.md
 --
 -- Danh sach cac bang trong Star Schema:
 --   1. Dim_Date: Bang chieu thoi gian chuan (ngay, thang, quy, nam)
 --   2. Dim_Region: Bang chieu dia ly / bang / khu vuc (tu nguon SUSEP)
 --   3. Dim_Policy: Bang chieu loai san pham bao hiem, dac diem hop dong
---   4. Dim_Customer: Bang chieu khach hang ap dung SCD Type 2 (Start_Date, End_Date, Is_Current)
+--   4. Dim_Customer: Bang chieu khach hang ap dung SCD Type 2 (tu nguon Porto Seguro ~1.5M dong)
 --   5. Fact_Premium: Bang su kien thu phi bao hiem (gia tri phi, so hop dong)
 --   6. Fact_Claims: Bang su kien boi thuong bao hiem (gia tri boi thuong, so vu claim)
+--   7. Fact_Customer_Risk_Prediction: Bang su kien luu diem du doan rui ro tu Machine Learning
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
@@ -84,15 +85,14 @@ GO
 -- ----------------------------------------------------------------------------
 -- 5. DDL: Dim_Customer (SCD Type 2)
 -- ----------------------------------------------------------------------------
--- TODO: Dinh nghia bang Dim_Customer ap dung SCD Type 2
+-- TODO: Dinh nghia bang Dim_Customer ap dung SCD Type 2 (nguon Porto Seguro ~1.5M dong)
 /*
 CREATE TABLE dbo.Dim_Customer (
     CustomerKey INT IDENTITY(1,1) NOT NULL PRIMARY KEY,  -- Surrogate Key
-    CustomerId INT NOT NULL,                             -- Business Key (Id tu Prudential)
-    Age INT NULL,
-    BMI DECIMAL(6,2) NULL,
-    RiskLevel NVARCHAR(50) NULL,
-    MedicalHistoryScore NVARCHAR(50) NULL,
+    CustomerId INT NOT NULL,                             -- Business Key (Id tu Porto Seguro)
+    IndGroupCategory NVARCHAR(50) NULL,                  -- Nhom dac trung ca nhan (ps_ind_*)
+    CarCategory NVARCHAR(50) NULL,                       -- Nhom dac trung xe (ps_car_*)
+    CalcScore DECIMAL(10,4) NULL,                        -- Chi so rui ro tinh toan (ps_calc_*)
     -- Cac cot SCD Type 2:
     Start_Date DATETIME2 NOT NULL,
     End_Date DATETIME2 NULL,
@@ -149,3 +149,25 @@ CREATE TABLE dbo.Fact_Claims (
 GO
 */
 
+-- ----------------------------------------------------------------------------
+-- 8. DDL: Fact_Customer_Risk_Prediction (Ket qua Machine Learning)
+-- ----------------------------------------------------------------------------
+-- TODO: Dinh nghia bang Fact_Customer_Risk_Prediction
+/*
+CREATE TABLE dbo.Fact_Customer_Risk_Prediction (
+    PredictionFactKey BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+    CustomerKey INT NOT NULL,
+    DateKey INT NOT NULL,
+    -- ML Output Measures & Labels
+    PredictedClaimProbability DECIMAL(6,4) NOT NULL,    -- Xac suat tu 0.0000 den 1.0000
+    RiskCategory NVARCHAR(20) NOT NULL,                 -- 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL'
+    ModelVersion NVARCHAR(50) NOT NULL,
+    CreatedDate DATETIME2 DEFAULT SYSUTCDATETIME(),
+    UpdatedDate DATETIME2 DEFAULT SYSUTCDATETIME(),
+    CONSTRAINT FK_Fact_RiskPred_Customer FOREIGN KEY (CustomerKey) REFERENCES dbo.Dim_Customer(CustomerKey),
+    CONSTRAINT FK_Fact_RiskPred_Date FOREIGN KEY (DateKey) REFERENCES dbo.Dim_Date(DateKey)
+);
+GO
+CREATE INDEX IX_Fact_RiskPred_Customer ON dbo.Fact_Customer_Risk_Prediction (CustomerKey, DateKey);
+GO
+*/

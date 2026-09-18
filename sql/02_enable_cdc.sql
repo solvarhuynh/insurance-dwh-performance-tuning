@@ -47,11 +47,11 @@ BEGIN
 END
 GO
 
-IF EXISTS (SELECT * FROM sys.tables WHERE name = 'stg_prudential_raw' AND is_tracked_by_cdc = 0)
+IF EXISTS (SELECT * FROM sys.tables WHERE name = 'stg_portoseguro_raw' AND is_tracked_by_cdc = 0)
 BEGIN
     EXEC sys.sp_cdc_enable_table
         @source_schema = N'dbo',
-        @source_name   = N'stg_prudential_raw',
+        @source_name   = N'stg_portoseguro_raw',
         @role_name     = NULL,
         @supports_net_changes = 1;
 END
@@ -76,7 +76,7 @@ GO
 INSERT INTO dbo.ETL_Watermark (SourceTableName, LastProcessedLSN, LastProcessedTime)
 VALUES 
     ('stg_susep_raw', sys.fn_cdc_get_min_lsn('dbo_stg_susep_raw'), SYSUTCDATETIME()),
-    ('stg_prudential_raw', sys.fn_cdc_get_min_lsn('dbo_stg_prudential_raw'), SYSUTCDATETIME());
+    ('stg_portoseguro_raw', sys.fn_cdc_get_min_lsn('dbo_stg_portoseguro_raw'), SYSUTCDATETIME());
 GO
 */
 
